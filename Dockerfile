@@ -1,23 +1,23 @@
-﻿FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+﻿# 1. Build Stage
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# ვაკოპირებთ .csproj ფაილს შესაბამის საქაღალდეში და ვაკეთებთ restore-ს
-COPY ["BookSystem/BookSystem.csproj", "BookSystem/"]
-RUN dotnet restore "BookSystem/BookSystem.csproj"
+# რადგან .csproj და Dockerfile ერთად დევს, პირდაპირ ვაკოპირებთ ფაილს
+COPY ["BookSystem.csproj", "./"]
+RUN dotnet restore "BookSystem.csproj"
 
-# ვაკოპირებთ მთლიან პროექტს
+# ვაკოპირებთ დანარჩენ ყველა ფაილს
 COPY . .
 
-# გადავდივართ პროექტის საქაღალდეში დასაბილდად
-WORKDIR "/src/BookSystem"
-RUN dotnet publish "BookSystem.csproj" -c Release -o /app/publish
+# ვაკეთებთ Publish-ს
+RUN dotnet publish "BookSystem.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
-# Runtime ეტაპი
-FROM mcr.microsoft.com/dotnet/aspnet:8.0
+# 2. Runtime Stage
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
 COPY --from=build /app/publish .
 
-# პორტის კონფიგურაცია
+# Railway მოითხოვს პორტის მითითებას
 ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080
 
