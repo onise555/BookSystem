@@ -34,10 +34,7 @@ var app = builder.Build();
 
 
 
-
-// --- Middleware Pipeline (თანმიმდევრობა კრიტიკულია!) ---
-
-// Swagger ყოველთვის ხელმისაწვდომი იქნება root-ზე (/)
+// Swagger-ის გამართვა (რომ პირდაპირ საიტის გახსნისას გამოჩნდეს)
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
@@ -45,14 +42,12 @@ app.UseSwaggerUI(c =>
     c.RoutePrefix = string.Empty;
 });
 
-// უსაფრთხოება და წვდომა
+// Middleware-ების სწორი თანმიმდევრობა
 app.UseHttpsRedirection();
-app.UseCors(); // აუცილებლად MapControllers-მდე!
+app.UseCors();
 app.UseAuthorization();
-
-// ენდფოინთები
 app.MapControllers();
 
-// Railway-სთვის პორტის მინიჭება
+// პორტის დინამიური მიღება Railway-სგან
 var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
 app.Run($"http://0.0.0.0:{port}");
