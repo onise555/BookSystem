@@ -12,13 +12,12 @@ namespace BookSystem.Data
 
             if (string.IsNullOrEmpty(connString))
             {
-                // 1. აქ ჩასვი ის DATABASE_PUBLIC_URL, რომელიც დააკოპირე
-                // 2. ბოლოში მიაწერე ?sslmode=require
-                optionsBuilder.UseNpgsql("postgresql://postgres:sZMHaECUNouZutVpeolnrgQwlJIKzRHB@yamabiko.proxy.rlwy.net:33961/railway");
+                // ლოკალური ტესტირებისთვის გამოიყენეთ სტანდარტული ფორმატი + SSL პარამეტრები
+                optionsBuilder.UseNpgsql("Host=yamabiko.proxy.rlwy.net;Port=33961;Database=railway;Username=postgres;Password=sZMHaECUNouZutVpeolnrgQwlJIKzRHB;SSL Mode=Require;Trust Server Certificate=true");
             }
             else
             {
-                // Railway-ზე გაშვებისას გამოიყენებს შიდა DATABASE_URL-ს
+                // Railway-ზე გაშვებისას გამოიყენებს გარემოს ცვლადს
                 optionsBuilder.UseNpgsql(connString);
             }
         }
