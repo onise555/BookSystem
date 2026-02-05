@@ -33,7 +33,9 @@ builder.Services.AddCors(build =>
 var app = builder.Build();
 
 
-// 2. Middleware Pipeline (მნიშვნელოვანია თანმიმდევრობა!)
+
+
+// --- Middleware Pipeline (თანმიმდევრობა კრიტიკულია!) ---
 
 // Swagger ყოველთვის ხელმისაწვდომი იქნება root-ზე (/)
 app.UseSwagger();
@@ -43,23 +45,14 @@ app.UseSwaggerUI(c =>
     c.RoutePrefix = string.Empty;
 });
 
-// CORS აუცილებლად MapControllers-მდე
-app.UseCors();
-
-// Railway-ზე HTTPS-ს თავად პროქსი მართავს, მაგრამ ეს ხაზი უსაფრთხოებისთვის კარგია
-
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
-
+// უსაფრთხოება და წვდომა
 app.UseHttpsRedirection();
-
+app.UseCors(); // აუცილებლად MapControllers-მდე!
 app.UseAuthorization();
 
+// ენდფოინთები
 app.MapControllers();
-app.UseCors();
 
+// Railway-სთვის პორტის მინიჭება
 var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
 app.Run($"http://0.0.0.0:{port}");
