@@ -33,18 +33,21 @@ builder.Services.AddCors(build =>
 var app = builder.Build();
 
 
-// Swagger ყოველთვის ჩართული იქნება, მიუხედავად იმისა, დეველოპმენტში ხარ თუ არა
+// 2. Middleware Pipeline (მნიშვნელოვანია თანმიმდევრობა!)
+
+// Swagger ყოველთვის ხელმისაწვდომი იქნება root-ზე (/)
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "TechMarketplace API V1");
-    c.RoutePrefix = string.Empty; // ეს ძალიან მნიშვნელოვანია! 404-ის ნაცვლად პირდაპირ Swagger-ს გახსნის
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "BookSystem API V1");
+    c.RoutePrefix = string.Empty;
 });
 
-app.UseHttpsRedirection();
-// დანარჩენი კოდი (Cors, Static Files, Auth და ა.შ.) დატოვე უცვლელი
+// CORS აუცილებლად MapControllers-მდე
+app.UseCors();
 
-// Configure the HTTP request pipeline.
+// Railway-ზე HTTPS-ს თავად პროქსი მართავს, მაგრამ ეს ხაზი უსაფრთხოებისთვის კარგია
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
