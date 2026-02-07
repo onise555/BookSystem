@@ -54,7 +54,7 @@ namespace BookSystem.Controllers
                 Id=x.Id,
                 FolderName = x.FolderName,
                 FolderImg = x.FolderImg,
-            });
+            }).OrderBy(x=>x.Id);
 
             if (folder == null)
             {
