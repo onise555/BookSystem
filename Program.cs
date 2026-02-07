@@ -1,53 +1,51 @@
-﻿
-using BookSystem.Data;
-using FluentValidation;
+﻿using BookSystem.Data;
 using FluentValidation.AspNetCore;
+using Microsoft.Extensions.FileProviders;
 
-var builder = WebApplication.CreateBuilder(args);
+var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+{
+    WebRootPath = "wwwroot"
+});
 
+builder.Services.AddControllers()
+    .AddFluentValidation();
 
-
-// Add services to the container.
-
-builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<DataContext>();
 
-builder.Services.AddControllers().AddFluentValidation(validation =>
+builder.Services.AddCors(options =>
 {
-    validation.AutomaticValidationEnabled = true;
-});
-
-builder.Services.AddValidatorsFromAssemblyContaining<Program>();
-
-builder.Services.AddCors(build =>
-{
-    build.AddDefaultPolicy(config =>
+    options.AddDefaultPolicy(policy =>
     {
-        config.AllowAnyHeader().AllowAnyMethod().AllowAnyOrigin();
+        policy.AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowAnyOrigin();
     });
 });
 
 var app = builder.Build();
 
-
-
-// Swagger-ის გამართვა (რომ პირდაპირ საიტის გახსნისას გამოჩნდეს)
+// Swagger
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "BookSystem API V1");
     c.RoutePrefix = string.Empty;
 });
-app.UseStaticFiles();
-// Middleware-ების სწორი თანმიმდევრობა
-app.UseHttpsRedirection();
+
+// 🔥 Static files explicit-ად
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(
+        Path.Combine(Directory.GetCurrentDirectory(), "wwwroot")
+    ),
+    RequestPath = ""
+});
+
 app.UseCors();
 app.UseAuthorization();
 app.MapControllers();
 
-// პორტის დინამიური მიღება Railway-სგან
 var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
 app.Run($"http://0.0.0.0:{port}");
