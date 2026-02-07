@@ -34,15 +34,23 @@ app.UseSwaggerUI(c =>
     c.RoutePrefix = string.Empty;
 });
 
-// 🔥 Static files explicit-ად
+// 1. სტანდარტული Static Files (wwwroot-ისთვის)
+app.UseStaticFiles();
+
+// 2. სპეციალური კონფიგურაცია Volume-ისთვის (uploads საქაღალდე)
+var uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+
+// თუ საქაღალდე არ არსებობს (პირველი გაშვებისას), შევქმნათ
+if (!Directory.Exists(uploadsPath))
+{
+    Directory.CreateDirectory(uploadsPath);
+}
+
 app.UseStaticFiles(new StaticFileOptions
 {
-    FileProvider = new PhysicalFileProvider(
-        Path.Combine(Directory.GetCurrentDirectory(), "wwwroot")
-    ),
-    RequestPath = ""
+    FileProvider = new PhysicalFileProvider(uploadsPath),
+    RequestPath = "/uploads"
 });
-
 app.UseCors();
 app.UseAuthorization();
 app.MapControllers();
