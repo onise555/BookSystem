@@ -74,14 +74,14 @@ namespace BookSystem.Controllers
                 "uploads/movies"
             );
 
-            var folder = _data.Folders.FirstOrDefault(x => x.Id == id);
+            var folder = _data.Folders.OrderBy(x=>x.Id).FirstOrDefault(x => x.Id == id);
 
             if (folder == null)
             {
                 return NotFound("Folder Not Founded");
             }
 
-            folder.Id = id;
+
             folder.FolderName = req.FolderName;
             folder.FolderImg = imgPath;
             
@@ -89,12 +89,14 @@ namespace BookSystem.Controllers
 
             var fullImgUrl = $"{Request.Scheme}://{Request.Host}{imgPath}";
 
+            
             return Ok(new
             {
                 folder.Id,
                 folder.FolderName,
                 ImageUrl = fullImgUrl
             });
+
         }
 
 
