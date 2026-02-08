@@ -37,8 +37,6 @@ namespace BookSystem.Controllers
             {
                 Title = req.Title,
                 BookImg = imgPath,
-                Description = req.Description,
-                Author = req.Author,
                 IsRead = req.IsRead,
                 Liked = req.Liked,
                 IsBought = req.IsBought,
@@ -54,8 +52,6 @@ namespace BookSystem.Controllers
             {
                 book.Id,
                 book.Title,
-                book.Description,
-                book.Author,
                 book.IsRead,
                 book.Liked,
                 book.IsBought,
@@ -73,10 +69,8 @@ namespace BookSystem.Controllers
             {
                 Id = x.Id,
                 Title = x.Title,
-                Author = x.Author,
                 IsRead = x.IsRead,
                 BookImg = x.BookImg,
-                Description = x.Description,
                 IsBought = x.IsBought,
                 Liked = x.Liked,
             }).ToList();
@@ -104,10 +98,8 @@ namespace BookSystem.Controllers
             book.Id = id;
             book.Title = req.Title;
             book.BookImg = imgPath;
-            book.Description = req.Description;
             book.IsRead = req.IsRead;
             book.Liked = req.Liked;
-            book.Author = req.Author;
             book.IsBought = req.IsBought;
 
 
@@ -120,8 +112,6 @@ namespace BookSystem.Controllers
                 book.Id,
                 book.Title,
                 ImageUrl = fullImgUrl,
-                book.Author,
-                book.Description,
                 book.IsRead,
                 book.Liked,
                 book.IsBought

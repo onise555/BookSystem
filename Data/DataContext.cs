@@ -13,7 +13,7 @@ namespace BookSystem.Data
             if (string.IsNullOrEmpty(connString))
             {
                 // ლოკალური ტესტირებისთვის გამოიყენეთ სტანდარტული ფორმატი + SSL პარამეტრები
-                optionsBuilder.UseNpgsql("Host=yamabiko.proxy.rlwy.net;Port=33961;Database=railway;Username=postgres;Password=sZMHaECUNouZutVpeolnrgQwlJIKzRHB;SSL Mode=Require;Trust Server Certificate=true");
+                optionsBuilder.UseNpgsql("Host=maglev.proxy.rlwy.net;Port=33374;Database=railway;Username=postgres;Password=brQTyOhUPKUFOswqAeaMGXQEGLgvBkwp;Pooling=true;");
             }
             else
             {
@@ -24,6 +24,8 @@ namespace BookSystem.Data
 
         public DbSet<Folder> Folders { get; set; }  
         public DbSet<Book> books { get; set; }  
+         
+        public DbSet<BookDetail> details { get; set; }  
 
     }
 }

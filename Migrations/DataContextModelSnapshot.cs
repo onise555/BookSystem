@@ -30,13 +30,7 @@ namespace BookSystem.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("Author")
-                        .HasColumnType("text");
-
                     b.Property<string>("BookImg")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Description")
                         .HasColumnType("text");
 
                     b.Property<int>("FolderId")
@@ -60,6 +54,31 @@ namespace BookSystem.Migrations
                     b.HasIndex("FolderId");
 
                     b.ToTable("books");
+                });
+
+            modelBuilder.Entity("BookSystem.Models.BookDetail", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Author")
+                        .HasColumnType("text");
+
+                    b.Property<int>("BookId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BookId")
+                        .IsUnique();
+
+                    b.ToTable("details");
                 });
 
             modelBuilder.Entity("BookSystem.Models.Folder", b =>
@@ -92,6 +111,23 @@ namespace BookSystem.Migrations
                         .IsRequired();
 
                     b.Navigation("folder");
+                });
+
+            modelBuilder.Entity("BookSystem.Models.BookDetail", b =>
+                {
+                    b.HasOne("BookSystem.Models.Book", "Book")
+                        .WithOne("detail")
+                        .HasForeignKey("BookSystem.Models.BookDetail", "BookId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Book");
+                });
+
+            modelBuilder.Entity("BookSystem.Models.Book", b =>
+                {
+                    b.Navigation("detail")
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("BookSystem.Models.Folder", b =>
