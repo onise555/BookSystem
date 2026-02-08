@@ -1,4 +1,5 @@
 ﻿using BookSystem.Data;
+using BookSystem.Dtos;
 using BookSystem.Models;
 using BookSystem.Requests;
 using Microsoft.AspNetCore.Http;
@@ -29,6 +30,21 @@ namespace BookSystem.Controllers
 
             _data.details.Add(detail);  
             _data.SaveChanges();    
+
+            return Ok(detail);  
+        }
+
+        [HttpGet("Get-Book-Detail/{id}")]
+
+        public ActionResult GetBookDetail(int id)
+        {
+            var detail =_data.details.Where(x=>x.BookId==id).Select
+                (x=> new GetDetailDtos
+                {
+                    Id =x.Id,
+                    Author = x.Author,  
+                    Description = x.Description,    
+                }).FirstOrDefault();    
 
             return Ok(detail);  
         }
