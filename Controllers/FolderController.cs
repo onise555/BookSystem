@@ -32,10 +32,16 @@ namespace BookSystem.Controllers
                 FolderName = req.FolderName,
 
             };
+            var exist = folder.FolderName;
 
             if(folder == null)
             {
                 return BadRequest("this is bad ");
+            }
+
+            if(exist == req.FolderName)
+            {
+                return BadRequest("Exist");  
             }
 
             _data.Folders.Add(folder);  
