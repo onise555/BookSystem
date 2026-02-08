@@ -79,6 +79,12 @@ namespace BookSystem.Controllers
 
 
         }
+        [HttpGet("Get-Book-Bookid/{id}")]
+        public ActionResult GetOnlyBook(int id)
+        {
+            var book =_data.books.Where(x=>x.Id==id).Select(x => new BookDtos { Id=x.Id, Title=x.Title, BookImg= x.BookImg, IsBought=x.IsBought, IsRead=x.IsRead, Liked= x.Liked }).FirstOrDefault();
+            return Ok(book);
+        }
 
         [HttpPut("Update/Book{id}")]
         public async Task<IActionResult> UpdateFolder(int id, [FromForm] UpdateBookRequest req)
@@ -142,6 +148,8 @@ namespace BookSystem.Controllers
 
            return Ok(deleteBookDtos);   
         }
+
+
 
 
         [HttpGet("/test-file")]
