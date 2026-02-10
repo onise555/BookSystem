@@ -27,7 +27,8 @@ namespace BookSystem.Controllers
             string? imgPath = null;
             if (req.BookImg != null)
             {
-                imgPath = await FileUploadHelper.UploadImg(req.BookImg, "uploads/book");
+                imgPath = await FileUploadHelper.UploadImg(req.BookImg, "book");
+
             }
 
             var folder = _data.Folders.Include(x => x.books).FirstOrDefault(x => x.Id == req.FolderId);
@@ -89,29 +90,25 @@ namespace BookSystem.Controllers
         [HttpPut("Update/Book{id}")]
         public async Task<IActionResult> UpdateFolder(int id, [FromForm] UpdateBookRequest req)
         {
-            var imgPath = await FileUploadHelper.UploadImg(
-                req.BookImg,
-                "uploads/book"
-            );
-
             var book = _data.books.FirstOrDefault(x => x.Id == id);
+            if (book == null) return NotFound("Book Not Found");
 
-            if (book == null)
+            // თუ სურათი არ გამოიგზავნა, ძველი დატოვე
+            string? imgPath = book.BookImg;
+            if (req.BookImg != null)
             {
-                return NotFound("Folder Not Founded");
+                imgPath = await FileUploadHelper.UploadImg(req.BookImg, "book");
             }
 
-            book.Id = id;
             book.Title = req.Title;
             book.BookImg = imgPath;
             book.IsRead = req.IsRead;
             book.Liked = req.Liked;
             book.IsBought = req.IsBought;
 
-
             await _data.SaveChangesAsync();
 
-            var fullImgUrl = $"{Request.Scheme}://{Request.Host}{imgPath}";
+            var fullImgUrl = imgPath != null ? $"{Request.Scheme}://{Request.Host}{imgPath}" : null;
 
             return Ok(new
             {
@@ -122,10 +119,8 @@ namespace BookSystem.Controllers
                 book.Liked,
                 book.IsBought
             });
-
-
-
         }
+
 
 
         [HttpDelete("Delete-Book/{id}")]
