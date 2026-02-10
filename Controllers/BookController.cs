@@ -65,7 +65,7 @@ namespace BookSystem.Controllers
         [HttpGet("Get-Book/{id}")]
         public ActionResult GetBook(int id)
         {
-            var book = _data.books.Where(x => x.FolderId == id).OrderBy(x=>x.Id).
+            var book = _data.books.Where(x => x.FolderId == id).
             Select(x => new BookDtos
             {
                 Id = x.Id,
