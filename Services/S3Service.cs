@@ -1,6 +1,7 @@
-﻿using Amazon.Runtime;
-using Amazon.S3;
+﻿using Amazon.S3;
+using Amazon.S3.Model;
 using Amazon.S3.Transfer;
+using Amazon.Runtime;
 
 namespace BookSystem.Services
 {
@@ -13,27 +14,25 @@ namespace BookSystem.Services
             _config = config;
         }
 
-        public async Task<string> UploadFileAsync(IFormFile file)
+        public async Task<string> UploadFileAsync(IFormFile file, string folder = "book")
         {
             try
             {
-                // Credentials
-                var credentials = new BasicAWSCredentials(
-                    _config["S3Config:AccessKey"],
-                    _config["S3Config:SecretKey"]
-                );
+                var accessKey = Environment.GetEnvironmentVariable("S3_ACCESS_KEY");
+                var secretKey = Environment.GetEnvironmentVariable("S3_SECRET_KEY");
 
-                // S3 Config - დაამატეთ RegionEndpoint
+                var credentials = new BasicAWSCredentials(accessKey, secretKey);
+
                 var s3Config = new AmazonS3Config
                 {
                     ServiceURL = _config["S3Config:ServiceUrl"],
-                    AuthenticationRegion = _config["S3Config:Region"], // დაამატეთ ეს!
+                    AuthenticationRegion = _config["S3Config:Region"],
                     ForcePathStyle = true
                 };
 
                 using var client = new AmazonS3Client(credentials, s3Config);
 
-                var fileName = $"{Guid.NewGuid()}_{file.FileName}";
+                var fileName = $"{folder}/{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
 
                 using var stream = file.OpenReadStream();
 
@@ -42,22 +41,36 @@ namespace BookSystem.Services
                     InputStream = stream,
                     Key = fileName,
                     BucketName = _config["S3Config:BucketName"],
-                    CannedACL = S3CannedACL.PublicRead
+                    ContentType = file.ContentType
+                    // წაშალეთ CannedACL
                 };
 
                 var fileTransferUtility = new TransferUtility(client);
                 await fileTransferUtility.UploadAsync(uploadRequest);
 
-                // URL დაბრუნება
-                return $"{_config["S3Config:ServiceUrl"]}/{_config["S3Config:BucketName"]}/{fileName}";
+                // Signed URL გენერაცია (7 დღით)
+                var presignedUrl = GetPresignedUrl(client, fileName, 7);
+
+                return presignedUrl;
             }
             catch (Exception ex)
             {
-                // ლოგირება
                 Console.WriteLine($"S3 Upload Error: {ex.Message}");
                 Console.WriteLine($"StackTrace: {ex.StackTrace}");
                 throw;
             }
+        }
+
+        private string GetPresignedUrl(AmazonS3Client client, string key, int expirationDays)
+        {
+            var request = new GetPreSignedUrlRequest
+            {
+                BucketName = _config["S3Config:BucketName"],
+                Key = key,
+                Expires = DateTime.UtcNow.AddDays(expirationDays)
+            };
+
+            return client.GetPreSignedURL(request);
         }
     }
 }
