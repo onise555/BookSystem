@@ -34,24 +34,38 @@ app.UseSwaggerUI(c =>
     c.RoutePrefix = string.Empty;
 });
 
-// 1. სტანდარტული Static Files (wwwroot-ისთვის)
+app.UseCors();
+
+// 1) wwwroot static files
 app.UseStaticFiles();
 
-// 2. სპეციალური კონფიგურაცია Volume-ისთვის (uploads საქაღალდე)
-var uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+// 2) uploads static files: PROD -> UPLOAD_ROOT, LOCAL -> wwwroot/uploads
+var uploadRoot = Environment.GetEnvironmentVariable("UPLOAD_ROOT");
 
-// თუ საქაღალდე არ არსებობს (პირველი გაშვებისას), შევქმნათ
-if (!Directory.Exists(uploadsPath))
+if (!string.IsNullOrWhiteSpace(uploadRoot))
 {
-    Directory.CreateDirectory(uploadsPath);
+    // PROD (Railway Volume): UPLOAD_ROOT=/data/uploads
+    Directory.CreateDirectory(uploadRoot);
+
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new PhysicalFileProvider(uploadRoot),
+        RequestPath = "/uploads"
+    });
+}
+else
+{
+    // LOCAL fallback: wwwroot/uploads
+    var localUploads = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+    Directory.CreateDirectory(localUploads);
+
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new PhysicalFileProvider(localUploads),
+        RequestPath = "/uploads"
+    });
 }
 
-app.UseStaticFiles(new StaticFileOptions
-{
-    FileProvider = new PhysicalFileProvider(uploadsPath),
-    RequestPath = "/uploads"
-});
-app.UseCors();
 app.UseAuthorization();
 app.MapControllers();
 

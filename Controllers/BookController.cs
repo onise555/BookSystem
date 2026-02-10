@@ -24,15 +24,11 @@ namespace BookSystem.Controllers
         [HttpPost("Add-Book-Folder")]
         public async Task<IActionResult> AddBook([FromForm] CreateBookRequest req)
         {
-            string? imgPath = null;
-            if (req.BookImg != null)
-            {
-                imgPath = await FileUploadHelper.UploadImg(req.BookImg, "book");
+            var folder = await _data.Folders.Include(x => x.books)
+                .FirstOrDefaultAsync(x => x.Id == req.FolderId);
+            if (folder == null) return NotFound("Folder Not Found");
 
-            }
-
-            var folder = _data.Folders.Include(x => x.books).FirstOrDefault(x => x.Id == req.FolderId);
-            if (folder == null) return NotFound();
+            var imgPath = await FileUploadHelper.UploadImg(req.BookImg, "book");
 
             var book = new Book
             {
@@ -60,33 +56,43 @@ namespace BookSystem.Controllers
             });
         }
 
-
-
         [HttpGet("Get-Book/{id}")]
-        public ActionResult GetBook(int id)
+        public IActionResult GetBook(int id)
         {
-            var book = _data.books.Where(x => x.FolderId == id).
-            Select(x => new BookDtos
-            {
-                Id = x.Id,
-                Title = x.Title,
-                IsRead = x.IsRead,
-                BookImg = x.BookImg,
-                IsBought = x.IsBought,
-                Liked = x.Liked,
-            }).ToList();
+            var book = _data.books
+                .Where(x => x.FolderId == id)
+                .Select(x => new BookDtos
+                {
+                    Id = x.Id,
+                    Title = x.Title,
+                    IsRead = x.IsRead,
+                    BookImg = x.BookImg,
+                    IsBought = x.IsBought,
+                    Liked = x.Liked,
+                })
+                .ToList();
 
             return Ok(book);
-
-
         }
+
         [HttpGet("Get-Book-Bookid/{id}")]
-        public ActionResult GetOnlyBook(int id)
+        public IActionResult GetOnlyBook(int id)
         {
-            var book =_data.books.Where(x=>x.Id==id).Select(x => new BookDtos { Id=x.Id, Title=x.Title, BookImg= x.BookImg, IsBought=x.IsBought, IsRead=x.IsRead, Liked= x.Liked }).FirstOrDefault();
+            var book = _data.books
+                .Where(x => x.Id == id)
+                .Select(x => new BookDtos
+                {
+                    Id = x.Id,
+                    Title = x.Title,
+                    BookImg = x.BookImg,
+                    IsBought = x.IsBought,
+                    IsRead = x.IsRead,
+                    Liked = x.Liked
+                })
+                .FirstOrDefault();
+
             return Ok(book);
         }
-
 
         [HttpPut("Update/Book/{id}")]
         public async Task<IActionResult> UpdateBook(int id, [FromForm] UpdateBookRequest req)
@@ -94,30 +100,48 @@ namespace BookSystem.Controllers
             var book = await _data.books.FirstOrDefaultAsync(x => x.Id == id);
             if (book == null) return NotFound("Book Not Found");
 
+            // Image: თუ არ მოვიდა ფაილი -> ძველი დარჩეს
             var imgPath = book.BookImg;
-            if (req.BookImg != null)
-                imgPath = await FileUploadHelper.UploadImg(req.BookImg, "book");
+            var uploaded = await FileUploadHelper.UploadImg(req.BookImg, "book");
+            if (!string.IsNullOrWhiteSpace(uploaded))
+                imgPath = uploaded;
 
-
+            // Folder move optional
             if (req.FolderId.HasValue && req.FolderId.Value > 0)
             {
+                // optional validation
+                var folderExists = await _data.Folders.AnyAsync(f => f.Id == req.FolderId.Value);
+                if (!folderExists) return BadRequest("Folder not found");
+
                 book.FolderId = req.FolderId.Value;
             }
 
-            book.Title = req.Title;
+            // Title optional
+            if (!string.IsNullOrWhiteSpace(req.Title))
+                book.Title = req.Title.Trim();
+
+            // bool? partial update
+            if (req.IsRead.HasValue) book.IsRead = req.IsRead.Value;
+            if (req.Liked.HasValue) book.Liked = req.Liked.Value;
+            if (req.IsBought.HasValue) book.IsBought = req.IsBought.Value;
+
             book.BookImg = imgPath;
-            book.IsRead = req.IsRead;
-            book.Liked = req.Liked;
-            book.IsBought = req.IsBought;
 
             await _data.SaveChangesAsync();
 
             var fullImgUrl = imgPath != null ? $"{Request.Scheme}://{Request.Host}{imgPath}" : null;
 
-            return Ok(new { book.Id, book.Title, ImageUrl = fullImgUrl, book.IsRead, book.Liked, book.IsBought });
+            return Ok(new
+            {
+                book.Id,
+                book.Title,
+                ImageUrl = fullImgUrl,
+                book.FolderId,
+                book.IsRead,
+                book.Liked,
+                book.IsBought
+            });
         }
-
-
 
         [HttpPatch("{id}/move")]
         public async Task<IActionResult> MoveBook(int id, [FromBody] MoveBookRequest req)
@@ -136,46 +160,19 @@ namespace BookSystem.Controllers
             return Ok(new { book.Id, book.FolderId });
         }
 
-
-
         [HttpDelete("Delete-Book/{id}")]
-
-        public ActionResult DeleteBook(int id)
+        public IActionResult DeleteBook(int id)
         {
-            var book = _data.books.FirstOrDefault(x=>x.Id == id);  
+            var book = _data.books.FirstOrDefault(x => x.Id == id);
+            if (book == null) return NotFound("Book Not Found");
 
-            if (book == null)
-            {
-                return NotFound("Book Not Founded");
-            }
-            _data.books.Remove(book);   
+            _data.books.Remove(book);
             _data.SaveChanges();
 
-            var deleteBookDtos = new DeleteBookDtos
-            {
-                Id = id,
-            };
-
-           return Ok(deleteBookDtos);   
+            return Ok(new { Id = id });
         }
-
-
-
-
-        [HttpDelete("Delete/all")]
-        public ActionResult DeleteAll()
-        {
-           var all =_data.books.ToList();   
-
-            _data.RemoveRange(all);
-
-            _data.SaveChanges();
-            return Ok(all);
-        }
-
-
-      
-
-
     }
-}   
+
+
+
+}

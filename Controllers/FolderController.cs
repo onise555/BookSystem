@@ -21,20 +21,18 @@ namespace BookSystem.Controllers
         }
 
         [HttpPost("Add-Folder")]
-        public ActionResult AddFolder([FromBody] CreateFolderRequest req)
+        public IActionResult AddFolder([FromBody] CreateFolderRequest req)
         {
             if (req == null || string.IsNullOrWhiteSpace(req.FolderName))
                 return BadRequest("FolderName required");
 
-            var exists = _data.Folders.Any(f => f.FolderName == req.FolderName.Trim());
-            if (exists)
-                return BadRequest("Folder already exists");
+            var name = req.FolderName.Trim();
+            var exists = _data.Folders.Any(f => f.FolderName == name);
+            if (exists) return BadRequest("Folder already exists");
 
             var folder = new Folder
             {
-                FolderName = req.FolderName.Trim(),
-
-                // თუ გინდა default image (არა upload)
+                FolderName = name,
                 FolderImg = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTAR_FiWH3ZDD4awqEa9-ud522NBt089zlSAQ&s"
             };
 
@@ -45,7 +43,7 @@ namespace BookSystem.Controllers
         }
 
         [HttpGet("Get-Folders")]
-        public ActionResult GetFolders()
+        public IActionResult GetFolders()
         {
             var folders = _data.Folders
                 .Select(x => new FolderDtos
@@ -55,12 +53,10 @@ namespace BookSystem.Controllers
                     FolderImg = x.FolderImg
                 })
                 .OrderBy(x => x.Id)
-                .ToList(); // ✅ materialize
+                .ToList();
 
             return Ok(folders);
         }
-
-
 
         [HttpPut("Update/Folder/{id}")]
         public async Task<IActionResult> UpdateFolder(int id, [FromForm] UpdateFolderRequest req)
@@ -68,15 +64,13 @@ namespace BookSystem.Controllers
             var folder = await _data.Folders.FirstOrDefaultAsync(x => x.Id == id);
             if (folder == null) return NotFound("Folder Not Found");
 
-            // 1) FolderImg: თუ არ გამოგზავნა, დატოვე ძველი
+            // Image: თუ არ მოვიდა -> ძველი დარჩეს
             var imgPath = folder.FolderImg;
+            var uploaded = await FileUploadHelper.UploadImg(req.FolderImg, "folder");
+            if (!string.IsNullOrWhiteSpace(uploaded))
+                imgPath = uploaded;
 
-            if (req.FolderImg != null && req.FolderImg.Length > 0)
-            {
-                imgPath = await FileUploadHelper.UploadImg(req.FolderImg, "folder");
-            }
-
-            // 2) FolderName: partial update-friendly
+            // Name optional
             if (!string.IsNullOrWhiteSpace(req.FolderName))
                 folder.FolderName = req.FolderName.Trim();
 
@@ -94,12 +88,8 @@ namespace BookSystem.Controllers
             });
         }
 
-
-
-
-
         [HttpDelete("Delete-Folder/{id}")]
-        public ActionResult DeleteFolder(int id)
+        public IActionResult DeleteFolder(int id)
         {
             var folder = _data.Folders.FirstOrDefault(x => x.Id == id);
             if (folder == null) return NotFound("Folder Not Found");
@@ -107,11 +97,10 @@ namespace BookSystem.Controllers
             _data.Folders.Remove(folder);
             _data.SaveChanges();
 
-            return Ok(new DeleteDtos { Id = id });
+            return Ok(new { Id = id });
         }
-
-
-
-
     }
+
+
 }
+
