@@ -1,4 +1,5 @@
 ﻿using BookSystem.Data;
+using BookSystem.Services;
 using FluentValidation.AspNetCore;
 using Microsoft.Extensions.FileProviders;
 
@@ -13,6 +14,7 @@ builder.Services.AddControllers()
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<DataContext>();
+builder.Services.AddScoped<S3Service>();
 
 builder.Services.AddCors(options =>
 {

@@ -1,36 +1,54 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Amazon.S3;
+using Amazon.S3.Transfer;
+using Amazon.Runtime;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
 
 namespace BookSystem.FileUploader
 {
     public static class FileUploadHelper
     {
-        // folder: "book" ან "folder"
-        public static async Task<string?> UploadImg(IFormFile? file, string folder)
+        public static async Task<string?> UploadImg(IFormFile? file, string folder, IConfiguration config)
         {
-            // Update-ზე: თუ ფაილი არ მოვიდა/ცარიელია -> ნუ შეცვლი (ვაბრუნებთ null)
             if (file == null || file.Length == 0)
                 return null;
 
-            // PROD: UPLOAD_ROOT=/data/uploads (volume)
-            // LOCAL: wwwroot/uploads
-            var uploadRoot = Environment.GetEnvironmentVariable("UPLOAD_ROOT");
+            // 1. მონაცემების წამოღება appsettings.json-დან
+            var accessKey = config["S3Config:AccessKey"];
+            var secretKey = config["S3Config:SecretKey"];
+            var serviceUrl = config["S3Config:ServiceUrl"];
+            var bucketName = config["S3Config:BucketName"];
 
-            var physicalRoot = !string.IsNullOrWhiteSpace(uploadRoot)
-                ? uploadRoot
-                : Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+            // 2. S3 კლიენტის კონფიგურაცია
+            var credentials = new BasicAWSCredentials(accessKey, secretKey);
+            var s3Config = new AmazonS3Config
+            {
+                ServiceURL = serviceUrl,
+                ForcePathStyle = true
+            };
 
-            var targetDir = Path.Combine(physicalRoot, folder);
-            Directory.CreateDirectory(targetDir);
+            using var client = new AmazonS3Client(credentials, s3Config);
 
+            // 3. ფაილის სახელის მომზადება (folder/guid.ext)
             var ext = Path.GetExtension(file.FileName);
-            var fileName = $"{Guid.NewGuid()}{ext}";
-            var filePath = Path.Combine(targetDir, fileName);
+            var fileName = $"{folder}/{Guid.NewGuid()}{ext}";
 
-            using var stream = new FileStream(filePath, FileMode.Create);
-            await file.CopyToAsync(stream);
+            // 4. ატვირთვა
+            using var stream = file.OpenReadStream();
+            var uploadRequest = new TransferUtilityUploadRequest
+            {
+                InputStream = stream,
+                Key = fileName, // Bucket-ში ფაილის გზა
+                BucketName = bucketName,
+                CannedACL = S3CannedACL.PublicRead
+            };
 
-            // DB-ში ინახავ public URL-ს (Program.cs /uploads mapping ემსახურება ამ ფოლდერს)
-            return $"/uploads/{folder}/{fileName}";
+            var fileTransferUtility = new TransferUtility(client);
+            await fileTransferUtility.UploadAsync(uploadRequest);
+
+            // 5. ვაბრუნებთ სრულ საჯარო URL-ს
+            // შედეგი იქნება: https://t3.storageapi.dev/ample-closet-i0getp4wbbco/book/guid.jpg
+            return $"{serviceUrl}/{bucketName}/{fileName}";
         }
     }
 }

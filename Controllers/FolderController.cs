@@ -14,12 +14,15 @@ namespace BookSystem.Controllers
     public class FolderController : ControllerBase
     {
         private readonly DataContext _data;
+        private readonly IConfiguration _config; // დავამატოთ კონფიგურაცია
 
-        public FolderController(DataContext data)
+        public FolderController(DataContext data, IConfiguration config)
         {
             _data = data;
+            _config = config;
         }
 
+        // AddFolder მეთოდში სურათი არ გაქვს, ამიტომ აქ არაფერი იცვლება
         [HttpPost("Add-Folder")]
         public IActionResult AddFolder([FromBody] CreateFolderRequest req)
         {
@@ -41,6 +44,7 @@ namespace BookSystem.Controllers
 
             return Ok(folder);
         }
+
 
         [HttpGet("Get-Folders")]
         public IActionResult GetFolders()
@@ -64,27 +68,27 @@ namespace BookSystem.Controllers
             var folder = await _data.Folders.FirstOrDefaultAsync(x => x.Id == id);
             if (folder == null) return NotFound("Folder Not Found");
 
-            // Image: თუ არ მოვიდა -> ძველი დარჩეს
-            var imgPath = folder.FolderImg;
-            var uploaded = await FileUploadHelper.UploadImg(req.FolderImg, "folder");
-            if (!string.IsNullOrWhiteSpace(uploaded))
-                imgPath = uploaded;
+            var imgUrl = folder.FolderImg;
 
-            // Name optional
+            // ვამატებთ _config-ს მესამე პარამეტრად
+            var uploaded = await FileUploadHelper.UploadImg(req.FolderImg, "folder", _config);
+
+            if (!string.IsNullOrWhiteSpace(uploaded))
+                imgUrl = uploaded; // აქ უკვე იქნება Bucket-ის სრული ლინკი
+
             if (!string.IsNullOrWhiteSpace(req.FolderName))
                 folder.FolderName = req.FolderName.Trim();
 
-            folder.FolderImg = imgPath;
+            folder.FolderImg = imgUrl;
 
             await _data.SaveChangesAsync();
 
-            var fullImgUrl = imgPath != null ? $"{Request.Scheme}://{Request.Host}{imgPath}" : null;
-
+            // აღარ გვჭირდება Request.Scheme და Request.Host-ით აწყობა
             return Ok(new
             {
                 folder.Id,
                 folder.FolderName,
-                ImageUrl = fullImgUrl
+                ImageUrl = imgUrl
             });
         }
 
