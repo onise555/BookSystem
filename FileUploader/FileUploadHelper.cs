@@ -13,42 +13,54 @@ namespace BookSystem.FileUploader
             if (file == null || file.Length == 0)
                 return null;
 
-            // 1. მონაცემების წამოღება appsettings.json-დან
-            var accessKey = config["S3Config:AccessKey"];
-            var secretKey = config["S3Config:SecretKey"];
-            var serviceUrl = config["S3Config:ServiceUrl"];
-            var bucketName = config["S3Config:BucketName"];
-
-            // 2. S3 კლიენტის კონფიგურაცია
-            var credentials = new BasicAWSCredentials(accessKey, secretKey);
-            var s3Config = new AmazonS3Config
+            try
             {
-                ServiceURL = serviceUrl,
-                ForcePathStyle = true
-            };
+                // 1. მონაცემების წამოღება appsettings.json-დან
+                var accessKey = config["S3Config:AccessKey"];
+                var secretKey = config["S3Config:SecretKey"];
+                var serviceUrl = config["S3Config:ServiceUrl"];
+                var bucketName = config["S3Config:BucketName"];
 
-            using var client = new AmazonS3Client(credentials, s3Config);
+                // 2. S3 კლიენტის კონფიგურაცია
+                var credentials = new BasicAWSCredentials(accessKey, secretKey);
+                var s3Config = new AmazonS3Config
+                {
+                    ServiceURL = serviceUrl,
+                    ForcePathStyle = true,
+                    AuthenticationRegion = config["S3Config:Region"] ?? "auto"
+                };
 
-            // 3. ფაილის სახელის მომზადება (folder/guid.ext)
-            var ext = Path.GetExtension(file.FileName);
-            var fileName = $"{folder}/{Guid.NewGuid()}{ext}";
+                using var client = new AmazonS3Client(credentials, s3Config);
 
-            // 4. ატვირთვა
-            using var stream = file.OpenReadStream();
-            var uploadRequest = new TransferUtilityUploadRequest
+                // 3. ფაილის სახელის მომზადება (folder/guid.ext)
+                var ext = Path.GetExtension(file.FileName);
+                var fileName = $"{folder}/{Guid.NewGuid()}{ext}";
+
+                // 4. ატვირთვა
+                using var stream = file.OpenReadStream();
+                var uploadRequest = new TransferUtilityUploadRequest
+                {
+                    InputStream = stream,
+                    Key = fileName,
+                    BucketName = bucketName,
+                    // ეს ხაზი ხდის ფაილს საჯაროს
+                    CannedACL = S3CannedACL.PublicRead,
+                    // ეს ხაზი ეუბნება ბრაუზერს რომ ეს სურათია
+                    ContentType = file.ContentType
+                };
+
+                var fileTransferUtility = new TransferUtility(client);
+                await fileTransferUtility.UploadAsync(uploadRequest);
+
+                // 5. ვაბრუნებთ მუდმივ საჯარო URL-ს
+                return $"{serviceUrl}/{bucketName}/{fileName}";
+            }
+            catch (Exception ex)
             {
-                InputStream = stream,
-                Key = fileName, // Bucket-ში ფაილის გზა
-                BucketName = bucketName,
-                CannedACL = S3CannedACL.PublicRead
-            };
-
-            var fileTransferUtility = new TransferUtility(client);
-            await fileTransferUtility.UploadAsync(uploadRequest);
-
-            // 5. ვაბრუნებთ სრულ საჯარო URL-ს
-            // შედეგი იქნება: https://t3.storageapi.dev/ample-closet-i0getp4wbbco/book/guid.jpg
-            return $"{serviceUrl}/{bucketName}/{fileName}";
+                // ლოგირება შეცდომის შემთხვევაში
+                Console.WriteLine($"S3 Upload Error: {ex.Message}");
+                return null;
+            }
         }
     }
 }
