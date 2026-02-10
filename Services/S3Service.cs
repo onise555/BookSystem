@@ -8,69 +8,62 @@ namespace BookSystem.Services
     public class S3Service
     {
         private readonly IConfiguration _config;
+        private readonly AmazonS3Client _s3Client;
+        private readonly string _bucketName;
 
         public S3Service(IConfiguration config)
         {
             _config = config;
+
+            // მონაცემების წამოღება კონფიგურაციიდან
+            var accessKey = _config["S3Config:AccessKey"];
+            var secretKey = _config["S3Config:SecretKey"];
+            _bucketName = _config["S3Config:BucketName"];
+
+            var credentials = new BasicAWSCredentials(accessKey, secretKey);
+            var s3Config = new AmazonS3Config
+            {
+                ServiceURL = _config["S3Config:ServiceUrl"],
+                AuthenticationRegion = _config["S3Config:Region"],
+                ForcePathStyle = true // აუცილებელია Railway/MinIO-სთვის
+            };
+
+            _s3Client = new AmazonS3Client(credentials, s3Config);
         }
 
         public async Task<string> UploadFileAsync(IFormFile file, string folder = "book")
         {
-            try
+            // 1. ფაილის უნიკალური სახელის შექმნა
+            var fileKey = $"{folder}/{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
+
+            using var stream = file.OpenReadStream();
+
+            // 2. ატვირთვის მოთხოვნა
+            var uploadRequest = new TransferUtilityUploadRequest
             {
-                var accessKey = Environment.GetEnvironmentVariable("S3_ACCESS_KEY");
-                var secretKey = Environment.GetEnvironmentVariable("S3_SECRET_KEY");
+                InputStream = stream,
+                Key = fileKey,
+                BucketName = _bucketName,
+                ContentType = file.ContentType
+            };
 
-                var credentials = new BasicAWSCredentials(accessKey, secretKey);
+            var fileTransferUtility = new TransferUtility(_s3Client);
+            await fileTransferUtility.UploadAsync(uploadRequest);
 
-                var s3Config = new AmazonS3Config
-                {
-                    ServiceURL = _config["S3Config:ServiceUrl"],
-                    AuthenticationRegion = _config["S3Config:Region"],
-                    ForcePathStyle = true
-                };
-
-                using var client = new AmazonS3Client(credentials, s3Config);
-
-                var fileName = $"{folder}/{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
-
-                using var stream = file.OpenReadStream();
-
-                var uploadRequest = new TransferUtilityUploadRequest
-                {
-                    InputStream = stream,
-                    Key = fileName,
-                    BucketName = _config["S3Config:BucketName"],
-                    ContentType = file.ContentType
-                    // წაშალეთ CannedACL
-                };
-
-                var fileTransferUtility = new TransferUtility(client);
-                await fileTransferUtility.UploadAsync(uploadRequest);
-
-                // Signed URL გენერაცია (7 დღით)
-                var presignedUrl = GetPresignedUrl(client, fileName, 7);
-
-                return presignedUrl;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"S3 Upload Error: {ex.Message}");
-                Console.WriteLine($"StackTrace: {ex.StackTrace}");
-                throw;
-            }
+            // 3. "საშვიანი" ლინკის გენერაცია (ვადა: 7 დღე)
+            return GeneratePresignedUrl(fileKey);
         }
 
-        private string GetPresignedUrl(AmazonS3Client client, string key, int expirationDays)
+        public string GeneratePresignedUrl(string fileKey)
         {
             var request = new GetPreSignedUrlRequest
             {
-                BucketName = _config["S3Config:BucketName"],
-                Key = key,
-                Expires = DateTime.UtcNow.AddDays(expirationDays)
+                BucketName = _bucketName,
+                Key = fileKey,
+                Expires = DateTime.UtcNow.AddDays(7) // ლინკი იმუშავებს 7 დღე
             };
 
-            return client.GetPreSignedURL(request);
+            return _s3Client.GetPreSignedURL(request);
         }
     }
 }

@@ -153,8 +153,18 @@ namespace BookSystem.Controllers
 
             return Ok(new { Id = id });
         }
+    
+
+
+    [HttpGet("dev/clear-db")]
+        public async Task<IActionResult> ClearDb()
+        {
+            // პირდაპირ აგზავნის ბრძანებას ბაზაში
+            await _data.Database.ExecuteSqlRawAsync("TRUNCATE TABLE books;");
+            await _data.Database.ExecuteSqlRawAsync("TRUNCATE TABLE \"Folders\" CASCADE;");
+            return Ok("ბაზა გასუფთავდა!");
+        }
+
+
     }
-
-
-
 }
