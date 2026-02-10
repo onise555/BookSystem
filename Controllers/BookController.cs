@@ -87,18 +87,16 @@ namespace BookSystem.Controllers
             return Ok(book);
         }
 
-        [HttpPut("Update/Book{id}")]
-        public async Task<IActionResult> UpdateFolder(int id, [FromForm] UpdateBookRequest req)
+
+        [HttpPut("Update/Book/{id}")]
+        public async Task<IActionResult> UpdateBook(int id, [FromForm] UpdateBookRequest req)
         {
-            var book = _data.books.FirstOrDefault(x => x.Id == id);
+            var book = await _data.books.FirstOrDefaultAsync(x => x.Id == id);
             if (book == null) return NotFound("Book Not Found");
 
-            // თუ სურათი არ გამოიგზავნა, ძველი დატოვე
-            string? imgPath = book.BookImg;
+            var imgPath = book.BookImg;
             if (req.BookImg != null)
-            {
                 imgPath = await FileUploadHelper.UploadImg(req.BookImg, "book");
-            }
 
             book.Title = req.Title;
             book.BookImg = imgPath;
@@ -110,15 +108,7 @@ namespace BookSystem.Controllers
 
             var fullImgUrl = imgPath != null ? $"{Request.Scheme}://{Request.Host}{imgPath}" : null;
 
-            return Ok(new
-            {
-                book.Id,
-                book.Title,
-                ImageUrl = fullImgUrl,
-                book.IsRead,
-                book.Liked,
-                book.IsBought
-            });
+            return Ok(new { book.Id, book.Title, ImageUrl = fullImgUrl, book.IsRead, book.Liked, book.IsBought });
         }
 
 
