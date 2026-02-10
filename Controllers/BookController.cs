@@ -153,18 +153,25 @@ namespace BookSystem.Controllers
 
             return Ok(new { Id = id });
         }
-    
 
 
-    [HttpGet("dev/clear-db")]
+        [HttpGet("dev/clear-db")]
         public async Task<IActionResult> ClearDb()
         {
-            // პირდაპირ აგზავნის ბრძანებას ბაზაში
-            await _data.Database.ExecuteSqlRawAsync("TRUNCATE TABLE books;");
-            await _data.Database.ExecuteSqlRawAsync("TRUNCATE TABLE \"Folders\" CASCADE;");
-            return Ok("ბაზა გასუფთავდა!");
-        }
+            try
+            {
+                // ბრჭყალები მნიშვნელოვანია "Folders"-ისთვის
+                await _data.Database.ExecuteSqlRawAsync("TRUNCATE TABLE \"books\" RESTART IDENTITY CASCADE;");
+                await _data.Database.ExecuteSqlRawAsync("TRUNCATE TABLE \"Folders\" RESTART IDENTITY CASCADE;");
 
+                return Ok("ბაზა წარმატებით გასუფთავდა! ახლა შეგიძლიათ ახალი სურათების ატვირთვა.");
+            }
+            catch (Exception ex)
+            {
+                // თუ ისევ 500-ს ამოაგდებს, აქ დაგვიწერს ზუსტ მიზეზს
+                return StatusCode(500, new { error = ex.Message, stack = ex.StackTrace });
+            }
+        }
 
     }
 }
