@@ -83,7 +83,7 @@ namespace BookSystem.Controllers
         [HttpGet("Get-Book-Bookid/{id}")]
         public ActionResult GetOnlyBook(int id)
         {
-            var book =_data.books.Where(x=>x.Id==id).Select(x => new BookDtos { Id=x.Id, Title=x.Title, BookImg= x.BookImg, IsBought=x.IsBought, IsRead=x.IsRead, Liked= x.Liked }).FirstOrDefault();
+            var book =_data.books.Where(x=>x.Id==id).OrderBy(x=>x.Id).Select(x => new BookDtos { Id = x.Id, Title = x.Title, BookImg = x.BookImg, IsBought = x.IsBought, IsRead = x.IsRead, Liked = x.Liked }).FirstOrDefault();
             return Ok(book);
         }
 
