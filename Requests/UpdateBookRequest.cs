@@ -9,6 +9,6 @@
         public bool? IsRead { get; set; }
         public bool? Liked { get; set; }
         public bool? IsBought { get; set; }
-        public int FolderId { get; set; }
+        public int? FolderId { get; set; }
     }
 }

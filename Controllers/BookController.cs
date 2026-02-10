@@ -98,6 +98,7 @@ namespace BookSystem.Controllers
             if (req.BookImg != null)
                 imgPath = await FileUploadHelper.UploadImg(req.BookImg, "book");
 
+           book.FolderId=req.FolderId;
             book.Title = req.Title;
             book.BookImg = imgPath;
             book.IsRead = req.IsRead;
