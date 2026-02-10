@@ -160,6 +160,8 @@ namespace BookSystem.Controllers
         }
 
 
+
+
         [HttpDelete("Delete/all")]
         public ActionResult DeleteAll()
         {
@@ -170,6 +172,9 @@ namespace BookSystem.Controllers
             _data.SaveChanges();
             return Ok(all);
         }
+
+
+      
 
 
     }
