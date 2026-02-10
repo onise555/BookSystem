@@ -162,20 +162,5 @@ namespace BookSystem.Controllers
 
 
 
-        [HttpGet("/test-file")]
-        public IActionResult TestFile()
-        {
-            var path = Path.Combine(Directory.GetCurrentDirectory(),
-                "wwwroot/uploads/movies/3dfcb672-d1df-4baa-97af-69a56b4deef7.jpg");
-
-            return Ok(System.IO.File.Exists(path));
-        }
-
-        public ActionResult GetBookCount()
-        {
-         var count=   _data.books.Count();
-
-            return Ok(count);   
-        }
     }
 }   
