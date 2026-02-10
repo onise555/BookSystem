@@ -160,6 +160,16 @@ namespace BookSystem.Controllers
         }
 
 
+        [HttpDelete("Delete/all")]
+        public ActionResult DeleteAll()
+        {
+           var all =_data.books.ToList();   
+
+            _data.RemoveRange(all);
+
+            _data.SaveChanges();
+            return Ok(all);
+        }
 
 
     }
