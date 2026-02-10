@@ -171,5 +171,11 @@ namespace BookSystem.Controllers
             return Ok(System.IO.File.Exists(path));
         }
 
+        public ActionResult GetBookCount()
+        {
+         var count=   _data.books.Count();
+
+            return Ok(count);   
+        }
     }
 }   
