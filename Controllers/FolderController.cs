@@ -62,70 +62,41 @@ namespace BookSystem.Controllers
 
 
 
-        [HttpPut("Update/Book/{id}")]
-        public async Task<IActionResult> UpdateBook(int id, [FromForm] UpdateBookRequest req)
+        [HttpPut("Update/Folder/{id}")]
+        public async Task<IActionResult> UpdateFolder(int id, [FromForm] UpdateFolderRequest req)
         {
-            var book = await _data.books.FirstOrDefaultAsync(x => x.Id == id);
-            if (book == null) return NotFound("Book Not Found");
+            var folder = await _data.Folders.FirstOrDefaultAsync(x => x.Id == id);
+            if (folder == null) return NotFound("Folder Not Found");
 
+            // 1) FolderImg: თუ არ გამოგზავნა, დატოვე ძველი
+            var imgPath = folder.FolderImg;
 
-            var imgPath = book.BookImg;
-            if (req.BookImg != null && req.BookImg.Length > 0)
+            if (req.FolderImg != null && req.FolderImg.Length > 0)
             {
-                imgPath = await FileUploadHelper.UploadImg(req.BookImg, "book");
+                imgPath = await FileUploadHelper.UploadImg(req.FolderImg, "folder");
             }
 
-            
-            if (req.FolderId.HasValue && req.FolderId.Value > 0)
-            {
-               
-                var folderExists = await _data.Folders.AnyAsync(f => f.Id == req.FolderId.Value);
-                if (!folderExists) return BadRequest("Folder not found");
+            // 2) FolderName: partial update-friendly
+            if (!string.IsNullOrWhiteSpace(req.FolderName))
+                folder.FolderName = req.FolderName.Trim();
 
-                book.FolderId = req.FolderId.Value;
-            }
-
-
-
-            book.BookImg = imgPath;
+            folder.FolderImg = imgPath;
 
             await _data.SaveChangesAsync();
 
-            var fullImgUrl = imgPath != null
-                ? $"{Request.Scheme}://{Request.Host}{imgPath}"
-                : null;
+            var fullImgUrl = imgPath != null ? $"{Request.Scheme}://{Request.Host}{imgPath}" : null;
 
             return Ok(new
             {
-                book.Id,
-                book.Title,
-                ImageUrl = fullImgUrl,
-                book.FolderId,
-                book.IsRead,
-                book.Liked,
-                book.IsBought
+                folder.Id,
+                folder.FolderName,
+                ImageUrl = fullImgUrl
             });
         }
 
- 
 
-        [HttpPatch("{id}/move")]
-        public async Task<IActionResult> MoveBook(int id, [FromBody] MoveBookRequest req)
-        {
-            if (req.FolderId <= 0) return BadRequest("FolderId is required");
 
-            var book = await _data.books.FirstOrDefaultAsync(x => x.Id == id);
-            if (book == null) return NotFound("Book Not Found");
 
-            var folderExists = await _data.Folders.AnyAsync(f => f.Id == req.FolderId);
-            if (!folderExists) return BadRequest("Folder not found");
-
-            book.FolderId = req.FolderId;
-            await _data.SaveChangesAsync();
-
-            return Ok(new { book.Id, book.FolderId });
-        }
-    
 
         [HttpDelete("Delete-Folder/{id}")]
         public ActionResult DeleteFolder(int id)

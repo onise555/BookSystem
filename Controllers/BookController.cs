@@ -119,6 +119,25 @@ namespace BookSystem.Controllers
 
 
 
+        [HttpPatch("{id}/move")]
+        public async Task<IActionResult> MoveBook(int id, [FromBody] MoveBookRequest req)
+        {
+            if (req.FolderId <= 0) return BadRequest("FolderId is required");
+
+            var book = await _data.books.FirstOrDefaultAsync(x => x.Id == id);
+            if (book == null) return NotFound("Book Not Found");
+
+            var folderExists = await _data.Folders.AnyAsync(f => f.Id == req.FolderId);
+            if (!folderExists) return BadRequest("Folder not found");
+
+            book.FolderId = req.FolderId;
+            await _data.SaveChangesAsync();
+
+            return Ok(new { book.Id, book.FolderId });
+        }
+
+
+
         [HttpDelete("Delete-Book/{id}")]
 
         public ActionResult DeleteBook(int id)
