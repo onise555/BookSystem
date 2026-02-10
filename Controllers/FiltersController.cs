@@ -41,5 +41,15 @@ namespace BookList.Controllers
 
         }
 
+        public ActionResult Sea()
+        {
+            return Ok();
+        }
+
     }
+
+
+    
 }
+
+
