@@ -70,7 +70,7 @@ namespace BookSystem.Controllers
 
             var imgUrl = folder.FolderImg;
 
-            // ვამატებთ _config-ს მესამე პარამეტრად
+           
             var uploaded = await FileUploadHelper.UploadImg(req.FolderImg, "folder", _config);
 
             if (!string.IsNullOrWhiteSpace(uploaded))
@@ -83,7 +83,6 @@ namespace BookSystem.Controllers
 
             await _data.SaveChangesAsync();
 
-            // აღარ გვჭირდება Request.Scheme და Request.Host-ით აწყობა
             return Ok(new
             {
                 folder.Id,
