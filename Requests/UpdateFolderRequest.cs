@@ -2,7 +2,7 @@
 {
     public class UpdateFolderRequest
     {
-        public IFormFile FolderImg { get; set; }
-        public string FolderName { get; set; }
+        public IFormFile? FolderImg { get; set; }
+        public  string? FolderName { get; set; }
     }
 }
