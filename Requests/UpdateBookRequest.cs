@@ -3,7 +3,7 @@
     public class UpdateBookRequest
     {
 
-        public string Title { get; set; }
+        public string? Title { get; set; }
         public IFormFile? BookImg { get; set; }
 
         public bool? IsRead { get; set; }

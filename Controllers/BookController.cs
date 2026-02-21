@@ -101,23 +101,34 @@ namespace BookSystem.Controllers
             var book = await _data.books.FirstOrDefaultAsync(x => x.Id == id);
             if (book == null) return NotFound("Book Not Found");
 
-            var imgPath = book.BookImg;
-            // აქაც ვამატებთ _config-ს
-            var uploaded = await FileUploadHelper.UploadImg(req.BookImg, "book", _config);
+            // 1) Title update (თუ გამოგზავნილია)
+            if (!string.IsNullOrWhiteSpace(req.Title))
+                book.Title = req.Title;
 
-            if (!string.IsNullOrWhiteSpace(uploaded))
-                imgPath = uploaded;
+            // 2) Booleans update (თუ გამოგზავნილია)
+            if (req.IsRead.HasValue) book.IsRead = req.IsRead.Value;
+            if (req.Liked.HasValue) book.Liked = req.Liked.Value;
+            if (req.IsBought.HasValue) book.IsBought = req.IsBought.Value;
 
-            // ... დანარჩენი ლოგიკა უცვლელია ...
+            // 3) Folder update
+            if (req.FolderId.HasValue) book.FolderId = req.FolderId.Value;
 
-            book.BookImg = imgPath;
+            // 4) Image update (თუ გამოგზავნილია)
+            if (req.BookImg != null)
+            {
+                var uploaded = await FileUploadHelper.UploadImg(req.BookImg, "book", _config);
+                if (!string.IsNullOrWhiteSpace(uploaded))
+                    book.BookImg = uploaded;
+            }
+
             await _data.SaveChangesAsync();
 
             return Ok(new
             {
                 book.Id,
                 book.Title,
-                ImageUrl = imgPath, // სრული URL უკვე გვაქვს
+                book.BookImg,               
+                ImageUrl = book.BookImg,    
                 book.FolderId,
                 book.IsRead,
                 book.Liked,
