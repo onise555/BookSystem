@@ -9,7 +9,7 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 });
 
 builder.Services.AddControllers()
-    .AddFluentValidation();
+  .AddFluentValidation();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -22,8 +22,8 @@ builder.Services.AddCors(options =>
     options.AddDefaultPolicy(policy =>
     {
         policy.AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowAnyOrigin();
+           .AllowAnyMethod()
+           .AllowAnyOrigin();
     });
 });
 
@@ -47,8 +47,8 @@ var uploadRoot = Environment.GetEnvironmentVariable("UPLOAD_ROOT");
 
 if (!string.IsNullOrWhiteSpace(uploadRoot))
 {
-    // PROD (Railway Volume): UPLOAD_ROOT=/data/uploads
-    Directory.CreateDirectory(uploadRoot);
+    // PROD (Railway Volume): UPLOAD_ROOT=/data/uploads
+    Directory.CreateDirectory(uploadRoot);
 
     app.UseStaticFiles(new StaticFileOptions
     {
@@ -58,8 +58,8 @@ if (!string.IsNullOrWhiteSpace(uploadRoot))
 }
 else
 {
-    // LOCAL fallback: wwwroot/uploads
-    var localUploads = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+    // LOCAL fallback: wwwroot/uploads
+    var localUploads = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
     Directory.CreateDirectory(localUploads);
 
     app.UseStaticFiles(new StaticFileOptions
