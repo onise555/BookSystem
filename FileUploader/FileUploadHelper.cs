@@ -1,10 +1,9 @@
-﻿using Amazon.Runtime;
-using Amazon.S3;
+﻿using Amazon.S3;
 using Amazon.S3.Model;
+using Amazon.Runtime;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
 using Amazon.S3.Transfer;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Webp;
-using SixLabors.ImageSharp.Processing;
 
 namespace BookSystem.FileUploader
 {
@@ -14,61 +13,46 @@ namespace BookSystem.FileUploader
         {
             if (file == null || file.Length == 0) return null;
 
-            // S3 კონფიგურაცია
             var accessKey = config["S3Config:AccessKey"];
             var secretKey = config["S3Config:SecretKey"];
             var serviceUrl = config["S3Config:ServiceUrl"];
             var bucketName = config["S3Config:BucketName"];
 
             var credentials = new BasicAWSCredentials(accessKey, secretKey);
-            var s3Config = new AmazonS3Config { ServiceURL = serviceUrl, ForcePathStyle = true };
+            var s3Config = new AmazonS3Config
+            {
+                ServiceURL = serviceUrl,
+                ForcePathStyle = true
+            };
+
             using var client = new AmazonS3Client(credentials, s3Config);
+            var fileKey = $"{folder}/{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
 
-            var fileKey = $"{folder}/{Guid.NewGuid()}.webp";
-
-            try
+            // 1. ატვირთვა
+            using var stream = file.OpenReadStream();
+            var uploadRequest = new TransferUtilityUploadRequest
             {
-                using var inputStream = file.OpenReadStream();
-                // ფოტოს ჩატვირთვა
-                using var image = await SixLabors.ImageSharp.Image.LoadAsync(inputStream);
-                using var outputStream = new MemoryStream();
+                InputStream = stream,
+                Key = fileKey,
+                BucketName = bucketName,
+                ContentType = file.ContentType
+            };
 
-                // ოპტიმიზაცია: ზომის შეცვლა (მაქსიმუმ 1200px სიგანე)
-                image.Mutate(x => x.Resize(new ResizeOptions
-                {
-                    Mode = ResizeMode.Max,
-                    Size = new SixLabors.ImageSharp.Size(1200, 0)
-                }));
+            var transferUtility = new TransferUtility(client);
+            await transferUtility.UploadAsync(uploadRequest);
 
-                // შენახვა WebP ფორმატში (75% ხარისხი საუკეთესო ბალანსია)
-                await image.SaveAsWebpAsync(outputStream, new WebpEncoder { Quality = 75 });
-                outputStream.Position = 0;
-
-                var uploadRequest = new TransferUtilityUploadRequest
-                {
-                    InputStream = outputStream,
-                    Key = fileKey,
-                    BucketName = bucketName,
-                    ContentType = "image/webp"
-                };
-
-                var transferUtility = new TransferUtility(client);
-                await transferUtility.UploadAsync(uploadRequest);
-
-                var urlRequest = new GetPreSignedUrlRequest
-                {
-                    BucketName = bucketName,
-                    Key = fileKey,
-                    Expires = DateTime.UtcNow.AddYears(10)
-                };
-
-                return client.GetPreSignedURL(urlRequest);
-            }
-            catch (Exception ex)
+            // 2. დროებითი (Presigned) ლინკის გენერაცია - ეს იმუშავებს პრივატულ ბაქეთზეც!
+            var urlRequest = new GetPreSignedUrlRequest
             {
-                // აქ შეგიძლია ლოგირება დაამატო საჭიროებისამებრ
-                return null;
-            }
+                BucketName = bucketName,
+                Key = fileKey,
+                Expires = DateTime.UtcNow.AddYears(10) // ლინკი იმუშავებს 7 დღე
+            };
+
+            return client.GetPreSignedURL(urlRequest);
         }
+
+
+
     }
 }
