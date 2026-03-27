@@ -1,26 +1,26 @@
-﻿# 1. Build Stage (აქ ხდება კოდის კომპილაცია)
+﻿# 1. Build Stage
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# ვიყენებთ wildcards (*), რომ ყველა .csproj ფაილი დაინახოს
-# ეს აგვარებს "file not found" შეცდომას, თუ სტრუქტურა ოდნავ განსხვავებულია
+# აკოპირებს ყველა .csproj ფაილს, რაც კი საქაღალდეშია
 COPY *.csproj ./
 RUN dotnet restore
 
-# ვაკოპირებთ დანარჩენ ფაილებს და ვაკეთებთ Publish-ს
+# აკოპირებს კოდს და აკეთებს ფაბლიშს
 COPY . .
 RUN dotnet publish -c Release -o /app/publish /p:UseAppHost=false
 
-# 2. Final Stage (აქ იქმნება პატარა იმიჯი, რომელიც მხოლოდ გაშვებისთვისაა)
+# 2. Final Stage
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
 COPY --from=build /app/publish .
 
-# უსაფრთხოების მიზნით, აპლიკაცია გაეშვება დაბალი პრივილეგიის მომხმარებლით
+# .NET 8-ის უსაფრთხოების სტანდარტი
 USER app
 
-# Railway-სთვის საჭირო პორტის კონფიგურაცია
+# Railway პორტის კონფიგურაცია
 ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080
 
-ENTRYPOINT ["dotnet", "Portfolio.Asp.dll"]
+# აქ ჩავწერე შენი პროექტის სახელი სურათის მიხედვით
+ENTRYPOINT ["dotnet", "BookSystem.dll"]
