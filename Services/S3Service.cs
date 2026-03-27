@@ -1,69 +1,69 @@
-﻿using Amazon.S3;
-using Amazon.S3.Model;
-using Amazon.S3.Transfer;
-using Amazon.Runtime;
+﻿    using Amazon.S3;
+    using Amazon.S3.Model;
+    using Amazon.S3.Transfer;
+    using Amazon.Runtime;
 
-namespace BookSystem.Services
-{
-    public class S3Service
+    namespace BookSystem.Services
     {
-        private readonly IConfiguration _config;
-        private readonly AmazonS3Client _s3Client;
-        private readonly string _bucketName;
-
-        public S3Service(IConfiguration config)
+        public class S3Service
         {
-            _config = config;
+            private readonly IConfiguration _config;
+            private readonly AmazonS3Client _s3Client;
+            private readonly string _bucketName;
 
-            // მონაცემების წამოღება კონფიგურაციიდან
-            var accessKey = _config["S3Config:AccessKey"];
-            var secretKey = _config["S3Config:SecretKey"];
-            _bucketName = _config["S3Config:BucketName"];
-
-            var credentials = new BasicAWSCredentials(accessKey, secretKey);
-            var s3Config = new AmazonS3Config
+            public S3Service(IConfiguration config)
             {
-                ServiceURL = _config["S3Config:ServiceUrl"],
-                AuthenticationRegion = _config["S3Config:Region"],
-                ForcePathStyle = true // აუცილებელია Railway/MinIO-სთვის
-            };
+                _config = config;
 
-            _s3Client = new AmazonS3Client(credentials, s3Config);
-        }
+                // მონაცემების წამოღება კონფიგურაციიდან
+                var accessKey = _config["S3Config:AccessKey"];
+                var secretKey = _config["S3Config:SecretKey"];
+                _bucketName = _config["S3Config:BucketName"];
 
-        public async Task<string> UploadFileAsync(IFormFile file, string folder = "book")
-        {
-            // 1. ფაილის უნიკალური სახელის შექმნა
-            var fileKey = $"{folder}/{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
+                var credentials = new BasicAWSCredentials(accessKey, secretKey);
+                var s3Config = new AmazonS3Config
+                {
+                    ServiceURL = _config["S3Config:ServiceUrl"],
+                    AuthenticationRegion = _config["S3Config:Region"],
+                    ForcePathStyle = true // აუცილებელია Railway/MinIO-სთვის
+                };
 
-            using var stream = file.OpenReadStream();
+                _s3Client = new AmazonS3Client(credentials, s3Config);
+            }
 
-            // 2. ატვირთვის მოთხოვნა
-            var uploadRequest = new TransferUtilityUploadRequest
+            public async Task<string> UploadFileAsync(IFormFile file, string folder = "book")
             {
-                InputStream = stream,
-                Key = fileKey,
-                BucketName = _bucketName,
-                ContentType = file.ContentType
-            };
+                // 1. ფაილის უნიკალური სახელის შექმნა
+                var fileKey = $"{folder}/{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
 
-            var fileTransferUtility = new TransferUtility(_s3Client);
-            await fileTransferUtility.UploadAsync(uploadRequest);
+                using var stream = file.OpenReadStream();
 
-            // 3. "საშვიანი" ლინკის გენერაცია (ვადა: 7 დღე)
-            return GeneratePresignedUrl(fileKey);
-        }
+                // 2. ატვირთვის მოთხოვნა
+                var uploadRequest = new TransferUtilityUploadRequest
+                {
+                    InputStream = stream,
+                    Key = fileKey,
+                    BucketName = _bucketName,
+                    ContentType = file.ContentType
+                };
 
-        public string GeneratePresignedUrl(string fileKey)
-        {
-            var request = new GetPreSignedUrlRequest
+                var fileTransferUtility = new TransferUtility(_s3Client);
+                await fileTransferUtility.UploadAsync(uploadRequest);
+
+                // 3. "საშვიანი" ლინკის გენერაცია (ვადა: 7 დღე)
+                return GeneratePresignedUrl(fileKey);
+            }
+
+            public string GeneratePresignedUrl(string fileKey)
             {
-                BucketName = _bucketName,
-                Key = fileKey,
-                Expires = DateTime.UtcNow.AddDays(7) // ლინკი იმუშავებს 7 დღე
-            };
+                var request = new GetPreSignedUrlRequest
+                {
+                    BucketName = _bucketName,
+                    Key = fileKey,
+                    Expires = DateTime.UtcNow.AddDays(7) // ლინკი იმუშავებს 7 დღე
+                };
 
-            return _s3Client.GetPreSignedURL(request);
+                return _s3Client.GetPreSignedURL(request);
+            }
         }
     }
-}
