@@ -1,97 +1,69 @@
-﻿using Amazon.S3;
-using Amazon.S3.Model;
-using Amazon.S3.Transfer;
-using Amazon.Runtime;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Processing;
-using SixLabors.ImageSharp.Formats.Webp;
+﻿    using Amazon.S3;
+    using Amazon.S3.Model;
+    using Amazon.S3.Transfer;
+    using Amazon.Runtime;
 
-namespace BookSystem.Services
-{
-    public class S3Service
+    namespace BookSystem.Services
     {
-        private readonly IConfiguration _config;
-        private readonly AmazonS3Client _s3Client;
-        private readonly string _bucketName;
-
-        public S3Service(IConfiguration config)
+        public class S3Service
         {
-            _config = config;
-            var accessKey = _config["S3Config:AccessKey"];
-            var secretKey = _config["S3Config:SecretKey"];
-            _bucketName = _config["S3Config:BucketName"];
+            private readonly IConfiguration _config;
+            private readonly AmazonS3Client _s3Client;
+            private readonly string _bucketName;
 
-            var credentials = new BasicAWSCredentials(accessKey, secretKey);
-            var s3Config = new AmazonS3Config
+            public S3Service(IConfiguration config)
             {
-                ServiceURL = _config["S3Config:ServiceUrl"],
-                AuthenticationRegion = _config["S3Config:Region"],
-                ForcePathStyle = true
-            };
+                _config = config;
 
-            _s3Client = new AmazonS3Client(credentials, s3Config);
-        }
+                // მონაცემების წამოღება კონფიგურაციიდან
+                var accessKey = _config["S3Config:AccessKey"];
+                var secretKey = _config["S3Config:SecretKey"];
+                _bucketName = _config["S3Config:BucketName"];
 
-        public async Task<string> UploadFileAsync(IFormFile file, string folder = "book")
-        {
-            if (file.ContentType.StartsWith("image/"))
-            {
-                return await UploadOptimizedImageAsync(file, folder);
+                var credentials = new BasicAWSCredentials(accessKey, secretKey);
+                var s3Config = new AmazonS3Config
+                {
+                    ServiceURL = _config["S3Config:ServiceUrl"],
+                    AuthenticationRegion = _config["S3Config:Region"],
+                    ForcePathStyle = true // აუცილებელია Railway/MinIO-სთვის
+                };
+
+                _s3Client = new AmazonS3Client(credentials, s3Config);
             }
 
-            var fileKey = $"{folder}/{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
-            using var stream = file.OpenReadStream();
-            return await ExecuteUpload(stream, fileKey, file.ContentType);
-        }
-
-        private async Task<string> UploadOptimizedImageAsync(IFormFile file, string folder)
-        {
-            var fileKey = $"{folder}/{Guid.NewGuid()}.webp";
-
-            using var inputStream = file.OpenReadStream();
-            // დაზუსტებული კლასის სახელი კონფლიქტის თავიდან ასაცილებლად
-            using var image = await SixLabors.ImageSharp.Image.LoadAsync(inputStream);
-            using var outputStream = new MemoryStream();
-
-            image.Mutate(x => x.Resize(new ResizeOptions
+            public async Task<string> UploadFileAsync(IFormFile file, string folder = "book")
             {
-                Mode = ResizeMode.Max,
-                // აუცილებლად SixLabors.ImageSharp.Size
-                Size = new SixLabors.ImageSharp.Size(1200, 0)
-            }));
+                // 1. ფაილის უნიკალური სახელის შექმნა
+                var fileKey = $"{folder}/{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
 
-            await image.SaveAsWebpAsync(outputStream, new WebpEncoder { Quality = 75 });
-            outputStream.Position = 0;
+                using var stream = file.OpenReadStream();
 
-            return await ExecuteUpload(outputStream, fileKey, "image/webp");
-        }
+                // 2. ატვირთვის მოთხოვნა
+                var uploadRequest = new TransferUtilityUploadRequest
+                {
+                    InputStream = stream,
+                    Key = fileKey,
+                    BucketName = _bucketName,
+                    ContentType = file.ContentType
+                };
 
-        private async Task<string> ExecuteUpload(Stream stream, string fileKey, string contentType)
-        {
-            var uploadRequest = new TransferUtilityUploadRequest
+                var fileTransferUtility = new TransferUtility(_s3Client);
+                await fileTransferUtility.UploadAsync(uploadRequest);
+
+                // 3. "საშვიანი" ლინკის გენერაცია (ვადა: 7 დღე)
+                return GeneratePresignedUrl(fileKey);
+            }
+
+            public string GeneratePresignedUrl(string fileKey)
             {
-                InputStream = stream,
-                Key = fileKey,
-                BucketName = _bucketName,
-                ContentType = contentType
-            };
+                var request = new GetPreSignedUrlRequest
+                {
+                    BucketName = _bucketName,
+                    Key = fileKey,
+                    Expires = DateTime.UtcNow.AddDays(7) // ლინკი იმუშავებს 7 დღე
+                };
 
-            var fileTransferUtility = new TransferUtility(_s3Client);
-            await fileTransferUtility.UploadAsync(uploadRequest);
-
-            return GeneratePresignedUrl(fileKey);
-        }
-
-        public string GeneratePresignedUrl(string fileKey)
-        {
-            var request = new GetPreSignedUrlRequest
-            {
-                BucketName = _bucketName,
-                Key = fileKey,
-                Expires = DateTime.UtcNow.AddDays(7)
-            };
-
-            return _s3Client.GetPreSignedURL(request);
+                return _s3Client.GetPreSignedURL(request);
+            }
         }
     }
-}
