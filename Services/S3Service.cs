@@ -34,13 +34,11 @@ namespace BookSystem.Services
 
         public async Task<string> UploadFileAsync(IFormFile file, string folder = "book")
         {
-            // თუ ფაილი სურათია, ვაკეთებთ ოპტიმიზაციას
             if (file.ContentType.StartsWith("image/"))
             {
                 return await UploadOptimizedImageAsync(file, folder);
             }
 
-            // სხვა ტიპის ფაილებისთვის (pdf, doc და ა.შ.) ვტოვებთ სტანდარტულ ატვირთვას
             var fileKey = $"{folder}/{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
             using var stream = file.OpenReadStream();
             return await ExecuteUpload(stream, fileKey, file.ContentType);
@@ -48,20 +46,20 @@ namespace BookSystem.Services
 
         private async Task<string> UploadOptimizedImageAsync(IFormFile file, string folder)
         {
-            var fileKey = $"{folder}/{Guid.NewGuid()}.webp"; // ფორმატს ვცვლით .webp-ზე
+            var fileKey = $"{folder}/{Guid.NewGuid()}.webp";
 
             using var inputStream = file.OpenReadStream();
-            using var image = await Image.LoadAsync(inputStream);
+            // დაზუსტებული კლასის სახელი კონფლიქტის თავიდან ასაცილებლად
+            using var image = await SixLabors.ImageSharp.Image.LoadAsync(inputStream);
             using var outputStream = new MemoryStream();
 
-            // სურათის ოპტიმიზაცია
             image.Mutate(x => x.Resize(new ResizeOptions
             {
                 Mode = ResizeMode.Max,
-                Size = new Size(1200, 0) // მაქსიმუმ 1200px სიგანე
+                // აუცილებლად SixLabors.ImageSharp.Size
+                Size = new SixLabors.ImageSharp.Size(1200, 0)
             }));
 
-            // WebP-ში შენახვა (Quality 75 იდეალური ბალანსია ზომასა და ხარისხს შორის)
             await image.SaveAsWebpAsync(outputStream, new WebpEncoder { Quality = 75 });
             outputStream.Position = 0;
 
