@@ -1,25 +1,25 @@
-﻿# 1. Build Stage
+﻿# 1. Build Stage (აქ ხდება კოდის კომპილაცია)
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# ჯერ მხოლოდ პროექტის ფაილს ვაკოპირებთ ქეშირებისთვის
-COPY ["Portfolio.Asp.csproj", "./"]
-RUN dotnet restore "Portfolio.Asp.csproj"
+# ვიყენებთ wildcards (*), რომ ყველა .csproj ფაილი დაინახოს
+# ეს აგვარებს "file not found" შეცდომას, თუ სტრუქტურა ოდნავ განსხვავებულია
+COPY *.csproj ./
+RUN dotnet restore
 
-# ახლა ვაკოპირებთ მთლიან კოდს
+# ვაკოპირებთ დანარჩენ ფაილებს და ვაკეთებთ Publish-ს
 COPY . .
-# ვაკეთებთ ფაბლიშს (Optimization: --no-restore რადგან ზემოთ უკვე ვქენით)
-RUN dotnet publish "Portfolio.Asp.csproj" -c Release -o /app/publish /p:UseAppHost=false --no-restore
+RUN dotnet publish -c Release -o /app/publish /p:UseAppHost=false
 
-# 2. Final Stage
+# 2. Final Stage (აქ იქმნება პატარა იმიჯი, რომელიც მხოლოდ გაშვებისთვისაა)
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
 COPY --from=build /app/publish .
 
-# უსაფრთხოებისთვის: ვიყენებთ დაბალი პრივილეგიის მომხმარებელს
+# უსაფრთხოების მიზნით, აპლიკაცია გაეშვება დაბალი პრივილეგიის მომხმარებლით
 USER app
 
-# Railway-სთვის და .NET 8-სთვის ეს პორტი სტანდარტია
+# Railway-სთვის საჭირო პორტის კონფიგურაცია
 ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080
 
