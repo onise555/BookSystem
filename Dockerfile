@@ -1,7 +1,8 @@
-﻿FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+﻿# 1. Build Stage
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# აკოპირებს პროექტს და აინსტალირებს ბიბლიოთეკებს
+# აკოპირებს ყველა .csproj ფაილს, რაც კი საქაღალდეშია
 COPY *.csproj ./
 RUN dotnet restore
 
@@ -9,15 +10,17 @@ RUN dotnet restore
 COPY . .
 RUN dotnet publish -c Release -o /app/publish /p:UseAppHost=false
 
+# 2. Final Stage
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
 COPY --from=build /app/publish .
 
-# ImageSharp-ისთვის ხანდახან საჭიროა დამატებითი ბიბლიოთეკები ლინუქსზე
-RUN apt-get update && apt-get install -y libicu-dev libfontconfig1 && rm -rf /var/lib/apt/lists/*
-
+# .NET 8-ის უსაფრთხოების სტანდარტი
 USER app
+
+# Railway პორტის კონფიგურაცია
 ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080
 
+# აქ ჩავწერე შენი პროექტის სახელი სურათის მიხედვით
 ENTRYPOINT ["dotnet", "BookSystem.dll"]
